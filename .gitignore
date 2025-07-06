@@ -1,0 +1,78 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+
+*.pyc
+__pycache__/
+
+# C extensions
+*.so
+
+# Django migrations (optional: keep if you want them in VCS)
+**/migrations/*.pyc
+**/migrations/__pycache__/
+**/migrations/*.py~
+
+# SQLite DB (if you're using it)
+*.sqlite3
+
+# Environment variables and secrets
+.env
+.env.*
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment folders
+venv/
+env/
+myenv/
+*/venv/
+*/env/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node modules (if using frontend assets)
+node_modules/
+
+# Django static and media (optional: ignore generated content)
+staticfiles/
+static/
+media/
+
+# Coverage reports
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# Test / debug / log files
+*.log
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.log
+*.tmp
+
+# Compiled JS / CSS (if using tools like Webpack)
+*.map
+
+# OS files
+.DS_Store
+Thumbs.db
+
+
+*.pyc
+__pycache__/
+.env
+*.log
+*.sqlite3
+*.csv
