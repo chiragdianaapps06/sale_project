@@ -69,10 +69,12 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-
 *.pyc
 __pycache__/
 .env
 *.log
 *.sqlite3
 *.csv
+# product/scripts/text.py
+product/scripts/temp.py
+product/scripts/load_data_optimize.py
