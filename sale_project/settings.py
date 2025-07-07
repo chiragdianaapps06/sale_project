@@ -85,7 +85,7 @@ DATABASES = {
 
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'sales',
+        'NAME':'sales_project',
         'USER': 'postgres',
         'PASSWORD': 'root123',
         'HOST': 'localhost',
