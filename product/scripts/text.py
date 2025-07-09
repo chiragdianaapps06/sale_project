@@ -44,11 +44,26 @@ def run():
         with open(csv_file_path, 'r') as file:
             reader = csv.DictReader(file)
 
+            existing_countries = {
+                (country.Country_name.strip(), country.region.strip()): country
+                for country in Country.objects.all()
+            }
+
+            existing_items = {
+                (item.item_type.strip(), float(item.unit_cost)): item
+                for item in Item.objects.all()
+            }
+            existing_orders = {
+                o.order_id: o for o in Order.objects.all()
+            }
+            
+
+
             for row in reader:
                 batch.append(row)
                 if len(batch) >= batch_size:
 
-                    batch_process(batch)
+                    batch_process(batch,existing_countries,existing_items,existing_orders )
                     logger.info(f"Processed batch up to row {count + batch_size}")
                      
                        
@@ -56,7 +71,7 @@ def run():
                     batch = []
 
             if batch:
-                batch_process(batch)
+                batch_process(batch,existing_countries,existing_items,existing_orders)
                
                 logger.info(f"Processed final batch up to row {count + len(batch)}")
 
@@ -70,7 +85,7 @@ def run():
 
 
 
-def batch_process(batch):
+def batch_process(batch,existing_countries,existing_items,existing_orders):
     
     orders_to_create = []
     sales_to_create = []
@@ -82,16 +97,7 @@ def batch_process(batch):
         with transaction.atomic():
 
           
-            existing_countries = {
-                (country.Country_name.strip(), country.region.strip()): country
-                for country in Country.objects.all()
-            }
-
-            existing_items = {
-                (item.item_type.strip(), float(item.unit_cost)): item
-                for item in Item.objects.all()
-            }
-
+            
             new_item_keys = set()
             new_country_keys = set()
 
@@ -153,19 +159,20 @@ def batch_process(batch):
                     if not item or not country:
                         logger.warning(f"Skipping order due to missing item or country: {row['Order ID']}")
                         continue
-
-                    order = Order(
-                        order_id=row['Order ID'].strip(),
-                        item_type=item,
-                        order_date=datetime.strptime(row['Order Date'], '%m/%d/%Y'),
-                        ship_date=datetime.strptime(row['Ship Date'], '%m/%d/%Y'),
-                        country=country,
-                        order_priority=row['Order Priority'].strip(),
-                        unit_sold=int(row['Units Sold']),
-                        unit_price=float(row['Unit Price']),
-                        total_price=float(row['Total Revenue']),
-                    )
-                    orders_to_create.append(order)
+                    order_ids = row['Order ID'].strip()
+                    if order_ids not in existing_orders:
+                        order = Order(
+                            order_id=row['Order ID'].strip(),
+                            item_type=item,
+                            order_date=datetime.strptime(row['Order Date'], '%m/%d/%Y'),
+                            ship_date=datetime.strptime(row['Ship Date'], '%m/%d/%Y'),
+                            country=country,
+                            order_priority=row['Order Priority'].strip(),
+                            unit_sold=int(row['Units Sold']),
+                            unit_price=float(row['Unit Price']),
+                            total_price=float(row['Total Revenue']),
+                        )
+                        orders_to_create.append(order)
 
 
                 except Exception as e:
@@ -181,11 +188,11 @@ def batch_process(batch):
             order_ids = [r['Order ID'].strip() for r in batch ]
 
             
-            existing_orders = {
+            existing_orders.update({
                 o.order_id: o
                 for o in Order.objects.filter(order_id__in=order_ids)
                 
-            }
+            })
             
             
             for row in batch:
@@ -200,6 +207,8 @@ def batch_process(batch):
                     if not order or not country:
                         logger.warning(f"Skipping sale due to missing order or country: {row['Order ID']}")
                         continue
+
+                    
 
                     sale = Sales(
                         order_id=order,

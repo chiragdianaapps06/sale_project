@@ -77,4 +77,5 @@ __pycache__/
 *.csv
 # product/scripts/text.py
 product/scripts/temp.py
+product/scripts/test.py
 product/scripts/load_data_optimize.py
