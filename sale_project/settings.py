@@ -43,7 +43,8 @@ INSTALLED_APPS = [
     'ordering',
     'product',
     'sale',
-    'django_extensions'
+    'django_extensions',
+    
 
 ]
 
@@ -75,7 +76,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'sale_project.wsgi.application'
-
+AUTH_USER_MODEL = 'baseapp.User'
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
@@ -133,3 +134,24 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': (
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',  # this enables browser GUI
+        
+    ),
+}
+
+
+
+EMAIL_BACKEND = 'djanog.core.mail.backends.smtp.Emailbackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_POST = 587
+EMAIL_HOST_USER = 'trivedichirag3120@gmail.com'
+EMAIL_HOST_PASSWORD = 'ifrw rjia sxan irkx'
+
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
