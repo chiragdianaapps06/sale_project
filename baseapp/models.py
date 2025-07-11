@@ -4,14 +4,23 @@ from django.contrib.auth.models import AbstractUser
 
 from django.utils import timezone
 
-# Create your models here.
-class UserInfo(models.Model):
+class TimestampModel(models.Model):
+    createdAt=models.DateTimeField(default=timezone.now)
+    updatedAt=models.DateTimeField(default=timezone.now)
+    class Meta:
+        abstract = True
+
+
+
+# class UserTimeStamp(models.Model):
     
-    created_at = models.DateTimeField(auto_created=True)
-    updated_at = models.DateField(auto_created= True)
+#     created_at = models.DateTimeField(default=timezone.now)
+#     updated_at = models.DateTimeField(default=timezone.now)
+    # class Meta:
+    #     abstract = True
 
 
-class User(AbstractUser,UserInfo):
+class User(AbstractUser,TimestampModel):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150,default=False)
     is_verified = models.BooleanField(default=False,null=False)
@@ -27,15 +36,15 @@ class User(AbstractUser,UserInfo):
 
 
 
-class OptVerification(UserInfo , models.Model):
+class OtpVerification(TimestampModel):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150)
-    otp = models.IntegerField(max_length=6)
+    otp = models.IntegerField()
     password = models.CharField(max_length=120)
     
 
     def is_expired(self):
-        return timezone.now() > self.created_at + timezone.timedelta(minutes=5)
+        return timezone.now() > self.createdAt + timezone.timedelta(minutes=5)
 
 
 
