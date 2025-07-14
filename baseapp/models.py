@@ -5,8 +5,8 @@ from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
 
 class TimestampModel(models.Model):
-    createdAt=models.DateTimeField(default=timezone.now)
-    updatedAt=models.DateTimeField(default=timezone.now)
+    createdAt=models.DateTimeField(auto_now_add=True)
+    updatedAt=models.DateTimeField(auto_now=True)
     class Meta:
         abstract = True
 
@@ -40,11 +40,11 @@ class OtpVerification(TimestampModel):
     email = models.EmailField(unique=True)
     username = models.CharField(max_length=150)
     otp = models.IntegerField()
-    password = models.CharField(max_length=120)
+    
     
 
     def is_expired(self):
-        return timezone.now() > self.createdAt + timezone.timedelta(minutes=5)
+        return timezone.now() > self.updatedAt + timezone.timedelta(minutes=5)
 
 
 
