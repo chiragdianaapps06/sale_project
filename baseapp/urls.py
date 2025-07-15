@@ -4,12 +4,12 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (  SignUpView , OtpVerificationsView , LoginView , 
                     ProtectedView, LogoutView , UpdateProfileView,
-                    UpdatePasswordView)
+                    UpdatePasswordView , VerifyEmailChangeOtpView, VerifyPasswordChangeOtpView)
 
 
 # from .tempview import (  SignUpView , OtpVerificationsView , LoginView , 
 #                     ProtectedView, LogoutView , UpdateProfileView,
-#                     UpdatePasswordView)
+#                     UpdatePasswordView , VerifyEmailChangeOtpView , VerifyPasswordChangeOtpView)
 from . import views
 from rest_framework_simplejwt.views import TokenRefreshView
 
@@ -27,8 +27,12 @@ urlpatterns = [
 
      path('logout/',LogoutView.as_view(),name = "logout"),
      path('update-profile/<int:pk>/',UpdateProfileView.as_view(),name ='update-profile'),
+     path('update-profile/verify-email/',VerifyEmailChangeOtpView.as_view(),name='update-email-verify'),
 
-     path('update-password/<int:pk>/',UpdatePasswordView.as_view(),name = 'update_password')
+     # path('update-password/<int:pk>/',UpdatePasswordView.as_view(),name = 'update_password')
+
+     path('update-password/send-otp/', UpdatePasswordView.as_view()),
+     path('update-password/verify-otp/', VerifyPasswordChangeOtpView.as_view()),
 
 
    

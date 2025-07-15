@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
 
-from .serializers import SignUpSerializer ,OtpVarificationSerializer  , UpdateProfileSerializer , UpdatePasswordSerializer
+from .serializers import SignUpSerializer ,OtpVerificationSerializer, UpdateProfileSerializer 
 
 from rest_framework.views import APIView
 from .models import OtpVerification
@@ -18,8 +18,12 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import APIException
 
+  # Send OTP to user's registered email
+from .tempserializer import OtpVerificationMixin
+
 
 User = get_user_model()
+
 
 
 
@@ -35,7 +39,7 @@ class SignUpView(viewsets.ModelViewSet):
         try:
 
             User.objects.get(email= request.data['email'])
-            return Response({"message":"user already exist"},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message":"user already exist", "data": None},status=status.HTTP_400_BAD_REQUEST)
         
         except User.DoesNotExist: 
             serializer = self.get_serializer(data=request.data)
@@ -44,10 +48,19 @@ class SignUpView(viewsets.ModelViewSet):
                 self.request.session['password'] = serializer.validated_data['password']
                 serializer.save()
                 return Response(
-                    {"message": "OTP sent to email. Please verify to complete registration."},
+                    {
+                        "message": "OTP sent to email. Please verify to complete registration.",
+                        "data":None
+                    },
                     status=status.HTTP_201_CREATED
                 )
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    "message": str(e),
+                    "data": None
+                }
+                , status=status.HTTP_400_BAD_REQUEST
+                )
         
         
 '''Otp Verification View'''
@@ -56,18 +69,24 @@ class OtpVerificationsView(APIView):
 
     def post(self, request):
         password = request.session.get('password')
-        serializer = OtpVarificationSerializer(data=request.data, context={'password': password})
+        serializer = OtpVerificationSerializer(data=request.data, context={'password': password})
         
-        if serializer.is_valid():
-            print("=====",serializer.save())
-            serializer.save()
-            
 
-            return Response(
-                {"message": "User registered successfully!"},
-                status=status.HTTP_201_CREATED
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+
+            if serializer.is_valid():
+                # print("=====",serializer.save())
+                serializer.save()
+                
+
+                return Response(
+                    {"message": "User registered successfully!",
+                     "data":None},
+                    status=status.HTTP_201_CREATED
+                )
+        except Exception as e:
+
+            return Response({"message": str(e), "data": None}, status=status.HTTP_400_BAD_REQUEST)
     
 
 '''Login View'''
@@ -129,57 +148,111 @@ class LogoutView(APIView):
             token = RefreshToken(refresh_token)
             token.blacklist()
 
-            return Response({"message":"User logged out Success"},status=status.HTTP_202_ACCEPTED)
+            return Response({"message":"User logged out Success", "data": None},status=status.HTTP_202_ACCEPTED)
         
         except Exception as e:
-            return Response({"message":"Invalid Token or Token Expired"},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message":"Invalid Token or Token Expired", "data": None},status=status.HTTP_400_BAD_REQUEST)
 
 
 
 '''Update Profile View '''
 
-class UpdateProfileView(generics.UpdateAPIView):
 
-    queryset = User.objects.all()
+
+class UpdateProfileView(generics.UpdateAPIView):
     permission_classes = [IsAuthenticated]
     serializer_class = UpdateProfileSerializer
-
-    # http_method_names = ['patch']
-
-    # thhis is make sure that only authenticated duser can update their profile
+    queryset = User.objects.all()
 
     def get_object(self):
         return self.request.user
-    
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(instance=self.get_object(), data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+
+        if request.data.get('email') and request.data['email'] != self.request.user.email:
+            return Response({"message": "OTP sent to new email. Please verify to complete email update."})
+
+        return Response({"message": "Profile updated successfully."})
+
+
+
+'''verify email change view'''
+
+
+class VerifyEmailChangeOtpView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = OtpVerificationSerializer(data=request.data, context={
+            'request': request,
+            'action': 'update_email'
+        })
+
+        if serializer.is_valid():
+            serializer.update(instance=request.user, validated_data={})
+            return Response({"message": "Email updated successfully."})
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST) 
 
     
 
 '''Update Password View'''
 
-class UpdatePasswordView(generics.UpdateAPIView):
 
-    queryset = User.objects.all()
+
+
+class UpdatePasswordView(APIView):
     permission_classes = [IsAuthenticated]
-    serializer_class = UpdatePasswordSerializer
+
+    def post(self, request):
+      
+
+        mixin = OtpVerificationMixin()
+        mixin.generate_and_send_otp(email=request.user.email, username=request.user.username)
+
+        # Store new password temporarily in session
+        request.session['pending_password'] = request.data.get('password')
+        request.session['confirmed_password'] = request.data.get('confirmed_password')
+        request.session['old_password'] = request.data.get('old_password')
+
+        return Response({"message": "OTP sent to your registered email. Please verify to update password."})
 
 
-    def get_object(self):
-        return self.request.user
-    
-    def update(self, request, *args, **kwargs):
 
-        try:
+'''verift password change view'''
 
-            serializer = self.get_serializer(instance=self.get_object(), data=request.data, partial=True)
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+class VerifyPasswordChangeOtpView(APIView):
+    permission_classes = [IsAuthenticated]
 
-            return Response({"message": "Password updated successfully."}, status=status.HTTP_205_RESET_CONTENT)
-        
-        except APIException as api_error:
-            return Response({"error": str(api_error.detail)}, status=api_error.status_code)
-        except Exception as e:
-            return Response({"error": f"Something went wrong: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+    def post(self, request):
+        password = request.session.get('pending_password')
+        confirmed_password = request.session.get('confirmed_password')
+        old_password = request.session.get('old_password')
+
+        if not (password and confirmed_password and old_password):
+            return Response({"error": "Session expired or password data missing."}, status=400)
+
+        otp_serializer = OtpVerificationSerializer(data=request.data, context={
+            'request': request,
+            'action': 'update_password',
+            'password': password
+        })
+
+        if otp_serializer.is_valid():
+            otp_serializer.update(instance=request.user, validated_data={})
+
+            # Clear session
+            request.session.pop('pending_password', None)
+            request.session.pop('confirmed_password', None)
+            request.session.pop('old_password', None)
+
+            return Response({"message": "Password updated successfully."})
+        return Response(otp_serializer.errors, status=400)
+
+
+
 
 
 

@@ -17,37 +17,20 @@ from rest_framework.views import APIView
 
 
 
+from rest_framework import serializers
+
+class OtpVerificationMixin:
 
 
-'''Signup serilizer'''
+    def generate_and_send_otp(self,email,username = None):
 
-class SignUpSerializer(serializers.Serializer):
-
-
-    email = serializers.EmailField()
-    username = serializers.CharField()
-    # password = serializers.CharField(write_only = True)
-    confirm_password = serializers.CharField(write_only=True)
-    password = serializers.CharField(write_only=True, validators=[validate_password])
-
-
-    def validate(self, data):
-
-        if data['password'] != data['confirm_password']:
-            raise serializers.ValidationError("Passwords do not match")
-        return data
-
-
-
-    def create(self,validated_data):
-        
         otp = str(random.randint(100000,999999))
 
-        
+            
         OtpVerification.objects.update_or_create(   
-            email=validated_data['email'],
+            email=email,
             defaults={
-                'username': validated_data['username'],
+                'username': username,
                 # 'password': validated_data['password'],  
                 'otp': otp
             }
@@ -56,164 +39,147 @@ class SignUpSerializer(serializers.Serializer):
 
 
         send_mail(
-            'your opt code',
-            f'your otp is {otp}',
-            'noreply@example.com',
-            [validated_data['email']],
-            fail_silently=False
+            subject='Your OTP Code',
+            message=f'Your OTP is {otp}',
+            from_email='noreply@example.com',
+            recipient_list=[email],
+            fail_silently=False,
         )
-        print(f"opt send to {validated_data['email']} , otp is {otp}")
+        print(f"opt send to {email} , otp is {otp}")
 
+        return otp
+
+    def verify_otp(self, email, otp):
+        try:
+            record = OtpVerification.objects.get(email=email, otp=otp)
+        except OtpVerification.DoesNotExist:
+            raise serializers.ValidationError("Invalid email or OTP")
+
+        if record.is_expired():
+            raise serializers.ValidationError("OTP has expired")
+
+        return record  # Valid OTP record
+
+
+
+
+'''Signup serilizer'''
+
+
+
+
+
+class SignUpSerializer(serializers.Serializer, OtpVerificationMixin):
+    email = serializers.EmailField()
+    username = serializers.CharField()
+    confirm_password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True, validators=[validate_password])
+
+    def validate(self, data):
+
+        if data['password'] != data['confirm_password']:
+            raise serializers.ValidationError("Passwords do not match")
+        return data
+
+    def create(self, validated_data):
+        self.generate_and_send_otp(validated_data['email'], validated_data['username'])
         return validated_data
-
-
 
 
 '''Otp verification serializer'''
 
-
-class OtpVarificationSerializer(serializers.Serializer):
-
+class OtpVerificationSerializer(serializers.Serializer, OtpVerificationMixin):
     email = serializers.EmailField()
     otp = serializers.CharField()
-    # password = serializers.CharField(write_only=True, validators=[validate_password])
 
-
-    def validate(self,data):
-
-        try:
-            record = OtpVerification.objects.get(email =data['email'] ,otp =data['otp'] )
-
-            print("opt verification",record)
-
-        except OtpVerification.DoesNotExist:
-            raise serializers.ValidationError("email or opt does not exist")
-        
-        print("OTP created at:", record.createdAt)
-        print("Now:", timezone.now())
-        print("Is expired:", record.is_expired())
-
-
-
-        if  record.is_expired():
-            raise serializers.ValidationError("opt expired.")
-        
+    def validate(self, data):
+        record = self.verify_otp(data['email'], data['otp'])
+        self.record = record
         return data
-        
-
 
     def create(self, validated_data):
 
+        record = self.record
+        password = self.context.get('password')
 
-        record = OtpVerification.objects.get(email = validated_data['email'])
 
-        password =self.context.get('password')
+        if not record or not record.id:
+            raise serializers.ValidationError("OTP verification record not found or not saved properly")
 
-        user = User.objects.update_or_create(
+        user, created = User.objects.get_or_create(
             email=record.email,
-            username=record.username,
-            password=password
-
+            defaults={'username': record.username, 'is_verified': True}
         )
-        user.is_verified = True
+        if password:
+            user.set_password(password)
         user.save()
-
-        
         record.delete()
-
         return user
-    
-
-
-
-'''Update Password serilizer'''
-class UpdateProfileSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = User
-        fields  = ("username","first_name","last_name","email")
-
-        extra_kwargs = {
-            'first_name': {'required':False},
-            'last_name': {'required': False},
-            'email': {'required':False},
-            'username':{'required':False}
-        }
-
-
-    def validate_email(self,email):
-
-        user = self.context['request'].user
-
-        if User.objects.exclude(pk =user.pk).filter(email = email).exists():
-            raise serializers.ValidationError({'email':'this email is already user by another user'})
-        
-        return email
-    
-    def validate_username(self,username):
-
-        user = self.context['request'].user
-
-        if User.objects.exclude(pk = user.pk).filter(username = username).exists():
-            raise serializers.ValidationError({'username':'username is already in used'})
-        
-        return username
-    
-
-    def update(self,instance,validated_data):
-
-        try:
-            
-            instance.first_name = validated_data.get('first_name',instance.first_name)
-            instance.last_name  = validated_data.get('last_name',instance.last_name)
-            instance.email = validated_data.get('email',instance.email)
-            instance.username = validated_data.get('username',instance.username)
-
-            instance.save()
-
-            return instance
-        except Exception as e:
-            raise serializers.ValidationError({"detail": f"An error occurred: {str(e)}"})
-
-
-'''Update Password Serializer'''
-
-class UpdatePasswordSerializer(serializers.ModelSerializer):
-
-    password = serializers.CharField(write_only = True, required = True, validators = [validate_password])
-    confirmed_password = serializers.CharField(write_only = True, required = True)
-    old_password = serializers.CharField(write_only=True, required=True)
-
-
-    class Meta:
-        model = User
-        fields = ('password','confirmed_password','old_password')
-
-    
-    def validate(self, data):
-
-        if data['password'] != data['confirmed_password']:
-            raise serializers.ValidationError("Passwords do not match")
-        return data
-    
-
-    def validate_old_password(self, value):
-
-        user = self.context['request'].user
-        if not user.check_password(value):
-            raise serializers.ValidationError({"old_password": "Old password is not correct"})
-        return value
-
 
     def update(self, instance, validated_data):
+        record = self.record
+        action = self.context.get('action')
 
-        try:
-            instance.set_password(validated_data['password'])
-            instance.save()
-            return instance
-        
-        except Exception as e:
-            raise serializers.ValidationError({"detail": f"An error occurred: {str(e)}"})
 
-        
+        if not record or not record.id:
+            raise serializers.ValidationError("OTP verification record not found or not saved properly")
+
+        if action == 'update_email':
+            instance.email = record.email
+        elif action == 'update_password':
+            password = self.context.get('password')
+            instance.set_password(password)
+
+        instance.save()
+        record.delete()
+        return instance
+
+   
+    
+
+
+
+'''Update profile serilizer'''
+
+
+class UpdateProfileSerializer(serializers.ModelSerializer, OtpVerificationMixin):
+    email = serializers.EmailField(required=False)
+
+    class Meta:
+        model = User
+        fields = ("username", "first_name", "last_name", "email")
+
+        extra_kwargs = {
+            'first_name': {'required': False},
+            'last_name': {'required': False},
+            'email': {'required': False},
+            'username': {'required': False}
+        }
+
+    def validate_email(self, email):
+        user = self.context['request'].user
+        if User.objects.exclude(pk=user.pk).filter(email=email).exists():
+            raise serializers.ValidationError("This email is already in use by another user")
+        return email
+
+    def validate_username(self, username):
+        user = self.context['request'].user
+        if User.objects.exclude(pk=user.pk).filter(username=username).exists():
+            raise serializers.ValidationError("This username is already taken")
+        return username
+
+    def update(self, instance, validated_data):
+        email = validated_data.get('email')
+
+        # If email is changing, trigger OTP and skip applying the email update for now
+        if email and email != instance.email:
+            self.generate_and_send_otp(email, instance.username)
+            return instance  # Do not update email here
+
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.username = validated_data.get('username', instance.username)
+
+        instance.save()
+        return instance
 
