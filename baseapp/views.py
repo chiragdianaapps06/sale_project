@@ -18,7 +18,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import APIException
 
-  # Send OTP to user's registered email
+# Send OTP to user's registered email
 from .tempserializer import OtpVerificationMixin
 
 
@@ -31,14 +31,24 @@ User = get_user_model()
 
 
 class SignUpView(viewsets.ModelViewSet):
+
+    '''
+        View to handle signup and send otp to email for verification.
+    '''
     queryset = User.objects.all()
     serializer_class = SignUpSerializer
 
     def create(self, request, *args, **kwargs):
 
         try:
+            if User.objects.filter(username = request.data['username']).exists():
+                return Response({
+                    "message": "User with this username already exists.",
+                    "data": None
+                }, status=status.HTTP_400_BAD_REQUEST)
 
             User.objects.get(email= request.data['email'])
+            # User.objects.get(username = request.data['username'])
             return Response({"message":"user already exist", "data": None},status=status.HTTP_400_BAD_REQUEST)
         
         except User.DoesNotExist: 
@@ -66,6 +76,10 @@ class SignUpView(viewsets.ModelViewSet):
 '''Otp Verification View'''
 
 class OtpVerificationsView(APIView):
+    
+    """
+        View to handle OTP verification for new user signup.
+    """
 
     def post(self, request):
         password = request.session.get('password')
@@ -93,6 +107,9 @@ class OtpVerificationsView(APIView):
 
 class LoginView(APIView):
     
+    '''
+        View to hanlde user login using Jwt authentication.
+    '''
 
     def post(self, request):
         email = request.data.get('email')
@@ -140,6 +157,11 @@ class ProtectedView(APIView):
 ''' Logout View '''
 
 class LogoutView(APIView):
+
+    """
+        View to handle logout by blacklisting the refresh token.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self,request):
@@ -160,6 +182,11 @@ class LogoutView(APIView):
 
 
 class UpdateProfileView(generics.UpdateAPIView):
+
+    """
+        View to allow users to update their profile information.
+        Triggers OTP if email is being changed.
+    """
     permission_classes = [IsAuthenticated]
     serializer_class = UpdateProfileSerializer
     queryset = User.objects.all()
@@ -183,6 +210,10 @@ class UpdateProfileView(generics.UpdateAPIView):
 
 
 class VerifyEmailChangeOtpView(APIView):
+    
+    """
+        Verifies OTP for email change and updates user's email.
+    """
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -204,6 +235,11 @@ class VerifyEmailChangeOtpView(APIView):
 
 
 class UpdatePasswordView(APIView):
+
+    """
+        Sends OTP to registered email for password change and stores new password in session.
+    """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -224,6 +260,11 @@ class UpdatePasswordView(APIView):
 '''verift password change view'''
 
 class VerifyPasswordChangeOtpView(APIView):
+
+    """
+        Verifies OTP and updates the user's password.
+    """
+    
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
