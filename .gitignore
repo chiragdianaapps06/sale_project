@@ -79,3 +79,7 @@ __pycache__/
 product/scripts/temp.py
 product/scripts/test.py
 product/scripts/load_data_optimize.py
+
+baseapp/tempserializer.py
+baseapp/tempview.py
+baseapp/utils.py
