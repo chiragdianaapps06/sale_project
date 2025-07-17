@@ -4,7 +4,8 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (  SignUpView , OtpVerificationsView , LoginView , 
                     ProtectedView, LogoutView , UpdateProfileView,
-                    UpdatePasswordView , VerifyEmailChangeOtpView, VerifyPasswordChangeOtpView)
+                    UpdatePasswordView , VerifyEmailChangeOtpView, VerifyPasswordChangeOtpView,
+                    UserActivateApiView, UserDeactivateApiView , AdminUserListApiView)
 
 
 # from .tempview import (  SignUpView , OtpVerificationsView , LoginView , 
@@ -26,13 +27,17 @@ urlpatterns = [
      path('protected/',ProtectedView.as_view(),name="protected-view"),
 
      path('logout/',LogoutView.as_view(),name = "logout"),
-     path('update-profile/<int:pk>/',UpdateProfileView.as_view(),name ='update-profile'),
+     path('update-profile/',UpdateProfileView.as_view(),name ='update-profile'),
      path('update-profile/verify-email/',VerifyEmailChangeOtpView.as_view(),name='update-email-verify'),
 
      # path('update-password/<int:pk>/',UpdatePasswordView.as_view(),name = 'update_password')
 
      path('update-password/send-otp/', UpdatePasswordView.as_view()),
      path('update-password/verify-otp/', VerifyPasswordChangeOtpView.as_view()),
+
+     path('deactivate/<int:user_id>/',UserDeactivateApiView.as_view(),name='user-deavtivate-view'),
+     path('activate/<int:user_id>/',UserActivateApiView.as_view(),name='user-activate-view'),
+     path('listuser/',AdminUserListApiView.as_view(),name='listuser-admin-view'),
 
 
    

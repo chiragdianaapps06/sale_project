@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import viewsets
 
-from .serializers import SignUpSerializer ,OtpVerificationSerializer, UpdateProfileSerializer 
+from .serializers import SignUpSerializer ,OtpVerificationSerializer, UpdateProfileSerializer ,UserModelSerilizer
 
 from rest_framework.views import APIView
 from .models import OtpVerification
@@ -15,11 +15,14 @@ from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework.permissions import AllowAny
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated , IsAdminUser
 from rest_framework.exceptions import APIException
 
 # Send OTP to user's registered email
 from .tempserializer import OtpVerificationMixin
+
+# paginations import
+from rest_framework.pagination import PageNumberPagination
 
 
 User = get_user_model()
@@ -181,11 +184,34 @@ class LogoutView(APIView):
 
 
 
-class UpdateProfileView(generics.UpdateAPIView):
+# class UpdateProfileView(generics.UpdateAPIView):
 
+#     """
+#         View to allow users to update their profile information.
+#         Triggers OTP if email is being changed.
+#     """
+#     permission_classes = [IsAuthenticated]
+#     serializer_class = UpdateProfileSerializer
+#     queryset = User.objects.all()
+
+#     def get_object(self):
+#         return self.request.user
+
+#     def update(self, request, *args, **kwargs):
+#         serializer = self.get_serializer(instance=self.get_object(), data=request.data, partial=True)
+#         serializer.is_valid(raise_exception=True)
+#         user = serializer.save()
+
+#         if request.data.get('email') and request.data['email'] != self.request.user.email:
+#             return Response({"message": "OTP sent to new email. Please verify to complete email update."})
+
+#         return Response({"message": "Profile updated successfully."})
+
+
+class UpdateProfileView(generics.UpdateAPIView):
     """
-        View to allow users to update their profile information.
-        Triggers OTP if email is being changed.
+    View to allow users to update their profile information.
+    Triggers OTP if email is being changed.
     """
     permission_classes = [IsAuthenticated]
     serializer_class = UpdateProfileSerializer
@@ -195,14 +221,26 @@ class UpdateProfileView(generics.UpdateAPIView):
         return self.request.user
 
     def update(self, request, *args, **kwargs):
-        serializer = self.get_serializer(instance=self.get_object(), data=request.data, partial=True)
+        instance = self.get_object()
+        old_email = instance.email
+
+        serializer = self.get_serializer(instance=instance, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+
+        # Check if there's anything to update
+        if not serializer.validated_data:
+            return Response({"message": "No changes detected."}, status=status.HTTP_200_OK)
+
         user = serializer.save()
+        new_email = request.data.get('email')
 
-        if request.data.get('email') and request.data['email'] != self.request.user.email:
-            return Response({"message": "OTP sent to new email. Please verify to complete email update."})
+        if new_email and new_email != old_email:
+            return Response(
+                {"message": "OTP sent to new email. Please verify to complete email update."},
+                status=status.HTTP_200_OK
+            )
 
-        return Response({"message": "Profile updated successfully."})
+        return Response({"message": "Profile updated successfully.", "username":serializer.data}, status=status.HTTP_200_OK)
 
 
 
@@ -246,12 +284,31 @@ class UpdatePasswordView(APIView):
       
 
         mixin = OtpVerificationMixin()
+
+
+        password = request.data.get('password')
+        confirmed_password = request.data.get('confirmed_password')
+        old_password = request.data.get('old_password')
+        
+        # 1. Check that password and confirmed password match
+        if password != confirmed_password:
+            return Response({"error": "New password and confirm password do not match."}, status=400)
+
+        # 2. Validate old password
+        user = request.user
+        if not user.check_password(old_password):
+            return Response({"error": "Old password is incorrect."}, status=400)
+        
+        if old_password == password:
+            return Response({"No change: pass new password. "})
+        
+
         mixin.generate_and_send_otp(email=request.user.email, username=request.user.username)
 
         # Store new password temporarily in session
-        request.session['pending_password'] = request.data.get('password')
-        request.session['confirmed_password'] = request.data.get('confirmed_password')
-        request.session['old_password'] = request.data.get('old_password')
+        request.session['pending_password'] = password
+        request.session['confirmed_password'] = confirmed_password
+        request.session['old_password'] = old_password
 
         return Response({"message": "OTP sent to your registered email. Please verify to update password."})
 
@@ -274,6 +331,17 @@ class VerifyPasswordChangeOtpView(APIView):
 
         if not (password and confirmed_password and old_password):
             return Response({"error": "Session expired or password data missing."}, status=400)
+        
+        if password != confirmed_password:
+            return Response({"error": "New password and confirm password do not match."}, status=400)
+
+        
+
+        # 2. Validate old password
+        user = request.user
+        if not user.check_password(old_password):
+            return Response({"error": "Old password is incorrect."}, status=400)
+        
 
         otp_serializer = OtpVerificationSerializer(data=request.data, context={
             'request': request,
@@ -297,3 +365,89 @@ class VerifyPasswordChangeOtpView(APIView):
 
 
 
+
+class UserDeactivateApiView(APIView):
+
+    '''
+    API view to deactivate a user.
+    Only admin users are allowed to access this endpoint.
+    '''
+
+    permission_classes = [IsAdminUser]
+
+    def post(Self,request,user_id):
+        
+        try:
+            user = User.objects.get(id=user_id)
+
+            if not user.is_active:
+                return  Response({"message": "User is already inactived."}, status=400)
+
+            user.is_active = False
+            user.save()
+
+            return Response({
+                "message": f"User {user.username} deactivated successfully.",
+                "is_active": user.is_active
+            }, status=200)
+        
+        except User.DoesNotExist:
+            return Response({"message": "User not found."}, status=404)
+
+
+
+class UserActivateApiView(APIView):
+
+    '''
+    API view to activate a user.
+    Only admin users are allowed to access this endpoint.
+    '''
+
+    permission_classes = [IsAdminUser]
+
+    def post(Self,request,user_id):
+        try:
+            user = User.objects.get(id=user_id)
+
+            if  user.is_active:
+                return  Response({"message": "User is already actived."}, status=400)
+
+            user.is_active = True
+            user.save()
+
+            return Response({
+                "message": f"User {user.username} activated successfully.",
+                "is_active": user.is_active
+            }, status=200)
+        
+        except User.DoesNotExist:
+            return Response({"message": "User not found."}, status=404)
+
+
+
+class AdminUserListApiView(APIView):
+
+
+    '''
+    API view to list all non-superuser users.
+    Only admin users are allowed to access this endpoint.
+    '''
+
+    permission_classes = [IsAdminUser]
+
+    def get(self,request):
+        try:
+
+            users = User.objects.exclude(is_superuser=True)
+            paginator = PageNumberPagination()
+            paginator.page_size = 10
+            paginated_users = paginator.paginate_queryset(users,request)
+            serilizer = UserModelSerilizer(paginated_users,many=True)
+
+            return paginator.get_paginated_response(serilizer.data)
+
+        except Exception as e:
+            return Response({
+                "message": "An unexpected error occurred while listing users.",
+                "details": str(e)
+            }, status=500)
