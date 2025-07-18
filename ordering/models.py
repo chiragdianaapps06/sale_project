@@ -17,7 +17,7 @@ class Country(models.Model):
 
 class Order(models.Model):
 
-    order_id = models.BigIntegerField(primary_key=True)
+    order_id = models.BigIntegerField(primary_key=True, blank=True)
     agent = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     item_type = models.ForeignKey(Item,on_delete=models.CASCADE ,related_name='product_item', default=None)
     order_date =  models.DateField(auto_now=True)

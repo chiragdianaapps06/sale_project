@@ -229,10 +229,28 @@ class UpdateProfileSerializer(serializers.ModelSerializer, OtpVerificationMixin)
             self.generate_and_send_otp(email, instance.username)
             return instance  # Do not update email here
 
-        instance.first_name = validated_data.get('first_name', instance.first_name)
-        instance.last_name = validated_data.get('last_name', instance.last_name)
-        instance.username = validated_data.get('username', instance.username)
+        # instance.first_name = validated_data.get('first_name', instance.first_name)
+        # instance.last_name = validated_data.get('last_name', instance.last_name)
+        # instance.username = validated_data.get('username', instance.username)
 
-        instance.save()
+        # instance.save()
+
+        updated = False  # Flag to detect changes
+
+        for attr in ['first_name', 'last_name', 'username']:
+            new_value = validated_data.get(attr)
+            if new_value and getattr(instance, attr) != new_value:
+                setattr(instance, attr, new_value)
+                updated = True
+
+        if updated:
+            instance.save()
         return instance
+    
+
+class UserModelSerilizer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields  = '__all__'
 
