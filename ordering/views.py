@@ -97,7 +97,7 @@ class OrderDetailAPIView(APIView):
         #  Retrieve an order by ID.
         order = self.get_object(pk)
         if not order:
-            return Response({"error": "Order not found."}, status=404)
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = OrderSerializer(order)
         response =  Response(serializer.data, status=status.HTTP_200_OK)
         response.message = "Order data found."
@@ -108,23 +108,22 @@ class OrderDetailAPIView(APIView):
         # Full update of an order.
         order = self.get_object(pk)
         if not order:
-            return Response({"error": "Order not found."}, status=404)
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = OrderSerializer(order, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=400)
-
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     def patch(self, request, pk):
         # Partial update of an order.
         order = self.get_object(pk)
         if not order:
-            return Response({"error": "Order not found."}, status=404)
+            return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
         serializer = OrderSerializer(order, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
 
@@ -133,12 +132,12 @@ class OrderDetailAPIView(APIView):
         try:
             order = self.get_object(pk)
             if not order:
-                return Response({"error": "Order not found."}, status=404)
+                return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
             order.is_deleted = True
             order.save()
-            return Response({"message": "Order soft-deleted."}, status=204)
+            return Response({"message": "Order soft-deleted."}, status=status.HTTP_204_NO_CONTENT)
         
         except Exception as e:
-            return Response({"error": "Failed to delete order.", "details": str(e)}, status=500)
+            return Response({"error": "Failed to delete order.", "details": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 

@@ -5,7 +5,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (  SignUpView , OtpVerificationsView , LoginView , 
                     ProtectedView, LogoutView , UpdateProfileView,
                     UpdatePasswordView , VerifyEmailChangeOtpView, VerifyPasswordChangeOtpView,
-                    UserActivateApiView, UserDeactivateApiView , AdminUserListApiView)
+                    ActivateDeactivateUserView, AdminUserListApiView)
 
 
 # from .tempview import (  SignUpView , OtpVerificationsView , LoginView , 
@@ -35,8 +35,9 @@ urlpatterns = [
      path('update-password/send-otp/', UpdatePasswordView.as_view()),
      path('update-password/verify-otp/', VerifyPasswordChangeOtpView.as_view()),
 
-     path('deactivate/<int:user_id>/',UserDeactivateApiView.as_view(),name='user-deavtivate-view'),
-     path('activate/<int:user_id>/',UserActivateApiView.as_view(),name='user-activate-view'),
+     path('deactivate/<int:user_id>/',ActivateDeactivateUserView.as_view(),name='user-deavtivate-view'),
+     path('activate/<int:user_id>/',ActivateDeactivateUserView.as_view(),name='user-activate-view'),
+     # path('activate/<int:user_id>/',ActivateDeactivateUserView.as_view(),name='user-activate-deactivate-view'),
      path('listuser/',AdminUserListApiView.as_view(),name='listuser-admin-view'),
 
 
