@@ -44,8 +44,9 @@ INSTALLED_APPS = [
     'product',
     'sale',
     'django_extensions',
-    'rest_framework_simplejwt.token_blacklist'
-    
+    'rest_framework_simplejwt.token_blacklist',
+    'django_filters',
+    'rest_framework'    
 
 ]
 
@@ -166,6 +167,14 @@ REST_FRAMEWORK = {
         'baseapp.renderers.GlobalJSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
+    
+    'DEFAULT_FILTER_BACKENDS': (
+            'django_filters.rest_framework.DjangoFilterBackend',
+            # other backends you might want to use
+        ),
+    
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
 }
 
 
