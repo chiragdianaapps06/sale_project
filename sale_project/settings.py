@@ -47,13 +47,10 @@ INSTALLED_APPS = [
     'sale',
     'django_extensions',
     'rest_framework_simplejwt.token_blacklist',
-<<<<<<< HEAD
     'django_filters',
     'rest_framework'    
-=======
     'chatapp'
     
->>>>>>> chat_feature
 
 ]
 
