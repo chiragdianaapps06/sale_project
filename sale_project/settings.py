@@ -32,6 +32,8 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
+    'channels',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -45,8 +47,13 @@ INSTALLED_APPS = [
     'sale',
     'django_extensions',
     'rest_framework_simplejwt.token_blacklist',
+<<<<<<< HEAD
     'django_filters',
     'rest_framework'    
+=======
+    'chatapp'
+    
+>>>>>>> chat_feature
 
 ]
 
@@ -77,7 +84,17 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'sale_project.wsgi.application'
+# WSGI_APPLICATION = 'sale_project.wsgi.application'
+ASGI_APPLICATION = 'sale_project.asgi.application'
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [("127.0.0.1", 6379)],
+        },
+    },
+}
+
 AUTH_USER_MODEL = 'baseapp.User'
 
 # Database
