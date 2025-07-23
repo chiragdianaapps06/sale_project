@@ -24,6 +24,19 @@ from .tempserializer import OtpVerificationMixin
 # paginations import
 from rest_framework.pagination import PageNumberPagination
 
+# importing for csv file dowload functionality
+import pandas as pd
+from django.http import HttpResponse, HttpResponseForbidden
+from rest_framework.decorators import api_view , permission_classes
+import csv
+from django.http import StreamingHttpResponse
+from ordering.models import Order
+
+# importing logger
+from ordering.logger import get_logger
+
+logger = get_logger("csv_download_logger")
+
 
 User = get_user_model()
 
@@ -452,3 +465,108 @@ class AdminUserListApiView(APIView):
                 "message": "An unexpected error occurred while listing users.",
                 "details": str(e)
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+
+
+@api_view(http_method_names=['GET'])
+def export_data(request):
+    print(request.user)
+    
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        return HttpResponseForbidden("You do not have permission to access this file.")
+    
+    user = User.objects.values('id','email','username','first_name','last_name','is_active','is_superuser')
+    df  = pd.DataFrame(list(user))
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition']='attachment; filename=persons.csv'
+    df.to_csv(response,index=False, lineterminator='\n')
+    return response
+
+
+
+class Echo:
+    """An object that implements just the write method of the file-like interface."""
+    def write(self, value):
+        return value
+    
+@api_view(http_method_names=['GET'])
+@permission_classes([IsAdminUser])
+def export_data_optimize(request):
+    try:
+
+        rows = User.objects.values_list('id','email','username','first_name','last_name','is_active','is_superuser').iterator()
+
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer)
+
+        # Generator expression for streaming
+        def row_generator():
+            yield ['id','email','username','first_name','last_name','is_active','is_superuser']  # headers
+            for row in rows:
+                yield row
+            
+            logger.info("Finished generating CSV rows.")
+
+        response = StreamingHttpResponse(
+            (writer.writerow(row) for row in row_generator()),
+            content_type='text/csv'
+        )
+        response['Content-Disposition'] = 'attachment; filename="large_users.csv"'
+        logger.info("CSV export completed successfully.")
+
+        return response
+    
+    except Exception as e:
+        logger.error(f"Error exporting CSV: {str(e)}", exc_info=True)
+        return Response(
+            {"error": "An error occurred while exporting the CSV."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+    
+
+
+
+    
+@api_view(http_method_names=['GET'])
+@permission_classes([IsAdminUser])
+def export_large_user_csv(request):
+    """
+    Exports a large dataset of Orders as CSV using streaming response.
+    Admin-only access. Handles exceptions with proper logging and JSON error.
+    """
+    try:
+        rows = Order.objects.values_list('order_id', 'agent', 'item_type', 'order_date','country').iterator()
+        # rows = Order.objects.all()
+
+        pseudo_buffer = Echo()
+        writer = csv.writer(pseudo_buffer)
+
+        # Generator expression for streaming
+        
+        def row_generator():
+            i=0
+            yield ['order_id', 'agent', 'item_type', 'order_date','country']  # headers
+            for row in rows:
+                print("=====",i)
+                i+=1
+                yield row
+            logger.info("Finished generating CSV rows.")
+
+        response = StreamingHttpResponse(
+            (writer.writerow(row) for row in row_generator()),
+            content_type='text/csv'
+        )
+        response['Content-Disposition'] = 'attachment; filename="order_data_large.csv"'
+
+        logger.info("CSV export completed successfully.")
+
+        return response
+
+    except Exception as e:
+        logger.error(f"Error exporting CSV: {str(e)}", exc_info=True)
+        return Response(
+            {"error": "An error occurred while exporting the CSV."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

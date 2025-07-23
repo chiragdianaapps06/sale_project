@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
-    'rest_framework'    
+    'rest_framework',    
     'chatapp'
     
 
