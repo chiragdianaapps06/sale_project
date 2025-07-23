@@ -3,7 +3,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from channels.middleware import BaseMiddleware
 from channels.db import database_sync_to_async
-from django.contrib.auth.models import AnonymousUser
+# from django.contrib.auth.models import AnonymousUser
 from rest_framework import status
 
 User = get_user_model()
@@ -33,7 +33,7 @@ class JWTAuthMiddleware(BaseMiddleware):
                 raise Exception("User not found")
             scope["user"] = user
         except Exception:
-            scope["user"] = AnonymousUser()
+            # scope["user"] = AnonymousUser()
             await self._reject_connection(send)
             return
 
@@ -52,5 +52,5 @@ class JWTAuthMiddleware(BaseMiddleware):
         """
         await send({
             "type": "websocket.close",
-            "status": status.HTTP_401_UNAUTHORIZED  # Custom close code for unauthorized
+            "status": 1008
         })
