@@ -49,7 +49,9 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'rest_framework',    
-    'chatapp'
+    'chatapp',
+    # 'twitterapiapp',
+    'googlecalendar'
     
 
 ]
@@ -206,3 +208,16 @@ EMAIL_USE_SSL = False
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+# import os
+
+# CLIENT_ID = os.environ.get('CLIENT_ID')
+# CLIENT_SECRETE = os.environ.get('CLIENT_SECRETE')
+
+# OAUTH2_PROVIDER = {
+#     'SCOPES': {'calendar': 'Read/write access to Calendar'},
+#     'CLIENT_ID':  CLIENT_ID,
+#     'CLIENT_SECRET': CLIENT_SECRETE,
+# }
+
+# GOOGLE_TOKEN_FILE = 'token.json'
