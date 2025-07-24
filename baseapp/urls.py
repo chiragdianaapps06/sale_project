@@ -5,7 +5,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (  SignUpView , OtpVerificationsView , LoginView , 
                     ProtectedView, LogoutView , UpdateProfileView,
                     UpdatePasswordView , VerifyEmailChangeOtpView, VerifyPasswordChangeOtpView,
-                    ActivateDeactivateUserView, AdminUserListApiView)
+                    ActivateDeactivateUserView, AdminUserListApiView ,export_data ,export_data_optimize ,
+                    export_large_user_csv)
 
 
 # from .tempview import (  SignUpView , OtpVerificationsView , LoginView , 
@@ -39,6 +40,15 @@ urlpatterns = [
      path('activate/<int:user_id>/',ActivateDeactivateUserView.as_view(),name='user-activate-view'),
      # path('activate/<int:user_id>/',ActivateDeactivateUserView.as_view(),name='user-activate-deactivate-view'),
      path('listuser/',AdminUserListApiView.as_view(),name='listuser-admin-view'),
+
+
+     # url for User data csv download
+     path('download/',export_data,name="download-user-data"),
+     path('download/',export_data_optimize,name="download-user-data-optimize"),
+  
+
+     # url for  order data csv download
+     path('download/orders/',export_large_user_csv,name="download-order-data"),
 
 
    
