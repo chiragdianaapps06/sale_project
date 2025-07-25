@@ -51,7 +51,8 @@ INSTALLED_APPS = [
     'rest_framework',    
     'chatapp',
     # 'twitterapiapp',
-    'googlecalendar'
+    'googlecalendar',
+    'sslserver'
     
 
 ]
@@ -157,7 +158,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # short-lived access
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),  # short-lived access
     "REFRESH_TOKEN_LIFETIME": timedelta(days=5),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,
