@@ -1,6 +1,6 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status
-from .serilizers import OrderSerializer
+from .serilizers import OrderSerializer,OrderSerializerVersion2
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from .models import Order
@@ -9,6 +9,8 @@ from rest_framework.permissions import IsAuthenticated,AllowAny , IsAdminUser
 
 from django.contrib.auth import get_user_model
 User = get_user_model()
+from rest_framework.versioning import URLPathVersioning
+
 
 
 class OrderCreateApiView(APIView):
@@ -19,6 +21,14 @@ class OrderCreateApiView(APIView):
     """
 
     permission_classes = [IsAuthenticated]
+    # versioning_class = URLPathVersioning
+
+    def get_serializer_class(self):
+        
+        version = self.request.query_params.get('version', 'v1')
+        if version == "v2":
+            return OrderSerializerVersion2
+        return OrderSerializer
 
     def get(self, request):
         
@@ -40,12 +50,13 @@ class OrderCreateApiView(APIView):
         if ordering:
             queryset = queryset.order_by(ordering)
 
+        serializer_class = self.get_serializer_class()
 
         # Pagination
         paginator = PageNumberPagination()
         paginator.page_size = 20
         paginated_qs = paginator.paginate_queryset(queryset, request)
-        serializer = OrderSerializer(paginated_qs, many=True)
+        serializer = serializer_class(paginated_qs, many=True, context={'request': request})
         return paginator.get_paginated_response(serializer.data)
 
     def post(self, request):
@@ -57,7 +68,10 @@ class OrderCreateApiView(APIView):
         """
         try:
             print("login user: ", request.user)
-            serializer = OrderSerializer(data=request.data,context={'request':request})
+            # serializer = OrderSerializer(data=request.data,context={'request':request})
+            serializer_class = self.get_serializer_class()
+            serializer = serializer_class(data=request.data,context={'request':request})
+        
             if serializer.is_valid():
                 serializer.save()
                 resp =Response(serializer.data,status=status.HTTP_201_CREATED)
@@ -80,8 +94,8 @@ class OrderDetailAPIView(APIView):
     - Retrieve (GET)
     - Update (PUT/PATCH)
     - Soft delete (DELETE)
+    
     '''
-
     
     def get_object(self, pk):
 
@@ -98,6 +112,7 @@ class OrderDetailAPIView(APIView):
         order = self.get_object(pk)
         if not order:
             return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+       
         serializer = OrderSerializer(order)
         response =  Response(serializer.data, status=status.HTTP_200_OK)
         response.message = "Order data found."
@@ -109,7 +124,8 @@ class OrderDetailAPIView(APIView):
         order = self.get_object(pk)
         if not order:
             return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
-        serializer = OrderSerializer(order, data=request.data)
+       
+        serializer =  OrderSerializer(order, data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -119,6 +135,7 @@ class OrderDetailAPIView(APIView):
         order = self.get_object(pk)
         if not order:
             return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
+        
         serializer = OrderSerializer(order, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()

@@ -10,6 +10,8 @@ from .views import  OrderCreateApiView , OrderDetailAPIView
 urlpatterns = [
     # path('orders/',OrderViewset.as_view(method),name='order-view'),
     path('orders/',OrderCreateApiView.as_view(),name='order-view'),
+    # path('orders/v2/',OrderCreateApiView.as_view(),name='order-view'),
+    
     path('orders/<int:pk>/',OrderDetailAPIView.as_view(),name='order-detail-view'),
    
     
