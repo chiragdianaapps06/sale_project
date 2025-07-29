@@ -273,7 +273,7 @@ class FetchFreeMeetingSlot(APIView):
         tz = pytz.timezone(user_timezone)
 
         # Get `end_date` from the request
-        end_date_str = request.data.get('end_date')  # Format: 'YYYY-MM-DD'
+        end_date_str = request.data.get('end_date')  
         if not end_date_str:
             raise ValueError("end_date is required (YYYY-MM-DD)")
 
@@ -332,7 +332,6 @@ class FetchFreeMeetingSlot(APIView):
         return free_slots
 
 
-
 class GoogleScheduleMeetingView(APIView):
 
     '''
@@ -351,13 +350,14 @@ class GoogleScheduleMeetingView(APIView):
 
         if not all([start_time, end_time, other_user_email]):
             logger.error(f"Missing required fields. start_time: {start_time}, end_time: {end_time}, other_user_email: {other_user_email}")
-            return Response({"error": "Missing required fields"}, status=400)
+            return Response({"error": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
+       
 
         try:
             token_obj = GoogleCalendarToken.objects.get(user=user)
         except GoogleCalendarToken.DoesNotExist:
             logger.error("Google token not found for the login user.")
-            return Response({"error": "Google token not found for user"}, status=400)
+            return Response({"error": "Google token not found for user"}, status=status.HTTP_400_BAD_REQUEST)
         
 
         # Validate the other user's email
@@ -383,6 +383,24 @@ class GoogleScheduleMeetingView(APIView):
         try:
             service = build("calendar", "v3", credentials=creds)
 
+            start_dt = datetime.datetime.fromisoformat(start_time)
+            end_dt = datetime.datetime.fromisoformat(end_time)
+      
+                
+            # Get user's calendar timezone
+            calendar = service.calendars().get(calendarId='primary').execute()
+            user_timezone = calendar.get('timeZone', 'UTC')
+            tz = pytz.timezone(user_timezone)
+
+            now = datetime.datetime.now(tz)
+            # print("current time", now)
+            if start_dt < now:
+                return  Response({"error": "Start time must be in the future."}, status=status.HTTP_400_BAD_REQUEST)
+            if end_time <= start_time:
+                return Response({"error": "End time must be after start time."}, status=status.HTTP_400_BAD_REQUEST)
+
+            
+
             request_body = {
                 "timeMin": start_time,
                 "timeMax": end_time,
@@ -401,18 +419,16 @@ class GoogleScheduleMeetingView(APIView):
             if current_user_busy:
                 logger.warning(f"{current_user_busy} is busy in the selected slot.")
                 return Response({
-                    "status": False,
                     "message": "Current user is busy in selected slot"
-                })
+                },status=status.HTTP_409_CONFLICT)
 
             if other_user_busy:
                 logger.warning(f"{other_user_email} is busy in the selected slot.")
                 return Response({
-                    "status": False,
                     "message": f"{other_user_email} is busy in selected slot"
-                })
+                },status=status.HTTP_409_CONFLICT)
 
-           # Create the event if both users are free
+           # Create the event if both users free
             event_body = {
                 "summary": summary,
                 "description": description,
@@ -424,16 +440,14 @@ class GoogleScheduleMeetingView(APIView):
             event = service.events().insert(calendarId='primary', body=event_body,sendUpdates='all').execute()
             logger.info(f"Meeting scheduled successfully between {user.email} and {other_user_email}. Event ID: {event.get('id')}")
             return Response({
-                "status": True,
                 "message": "Meeting scheduled successfully",
                 "event": event
-            })
-
+            },status=status.HTTP_201_CREATED)
+        
         except Exception as e:
             return Response({
-                "status": False,
                 "message": f"Error: {str(e)}"
-            }, status=500)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
     

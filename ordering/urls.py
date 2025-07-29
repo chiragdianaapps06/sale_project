@@ -9,10 +9,12 @@ from .views import  OrderCreateApiView , OrderDetailAPIView
 # }
 urlpatterns = [
     # path('orders/',OrderViewset.as_view(method),name='order-view'),
-    path('orders/',OrderCreateApiView.as_view(),name='order-view'),
-    # path('orders/v2/',OrderCreateApiView.as_view(),name='order-view'),
+    path('',OrderCreateApiView.as_view(),name='order-view'), # exampple : orders/v2/
     
-    path('orders/<int:pk>/',OrderDetailAPIView.as_view(),name='order-detail-view'),
+    # path('orders/v2/',OrderCreateApiView.as_view(),name='order-view'),
+    path('<str:version>/',OrderCreateApiView.as_view(),name='order-view'), # exampple : v2/
+    path('order/<int:pk>/',OrderDetailAPIView.as_view(),name='order-detail-view'),
+
    
     
 ]

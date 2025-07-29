@@ -29,6 +29,9 @@ class OrderSerializer(serializers.ModelSerializer):
             order_id = int(''.join(random.choices(string.digits, k=10)))
             if not Order.objects.filter(order_id=order_id).exists():
                 return order_id
+            
+   
+
 
     def create(self, validated_data):
 
@@ -74,11 +77,10 @@ class OrderSerializerVersion2(serializers.ModelSerializer):
        Serilaizer for order model
     '''
 
-    # agent = serializers.HyperlinkedRelatedField(view_name='user-detail', queryset=User.objects.all())
-
+   
     class Meta:
         model = Order
-        fields = ['order_id','agent','order_priority','country','total_price']
+        fields  = ['order_id','agent','order_priority','country','unit_sold','unit_price','total_price','item_type']
         read_only_fields = ('order_date', 'ship_date', 'order_id')
 
     def generate_unique_order_id(self):
@@ -128,6 +130,26 @@ class OrderSerializerVersion2(serializers.ModelSerializer):
             # Add generated unique order ID
         validated_data['order_id'] = self.generate_unique_order_id()
         return super().create(validated_data)
+    
+    def to_representation(self, instance):
+        """
+        Customize the fields returned for GET requests.
+        Returns fewer fields for GET requests than for POST.
+        """
+        request = self.context.get('request')
+
+        if request and request.method == 'GET':
+            # For GET requests, only return selected fields (e.g., 'order_id', 'order_priority', 'unit_sold', etc.)
+            return {
+                'order_id': instance.order_id,
+                'order_priority': instance.order_priority,
+                'unit_sold': instance.unit_sold,
+                'total_price': instance.total_price,
+                # Add more fields as necessary for GET
+            }
+        
+        # Default case for POST or other methods, return all fields
+        return super().to_representation(instance)
     
 
 
