@@ -44,7 +44,7 @@ urlpatterns = [
 
      # url for User data csv download
      path('download/',export_data,name="download-user-data"),
-     path('download/',export_data_optimize,name="download-user-data-optimize"),
+     path('download-optimize/',export_data_optimize,name="download-user-data-optimize"),
   
 
      # url for  order data csv download

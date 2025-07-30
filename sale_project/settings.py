@@ -49,7 +49,10 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_filters',
     'rest_framework',    
-    'chatapp'
+    'chatapp',
+    # 'twitterapiapp',
+    'googlecalendar',
+    'sslserver'
     
 
 ]
@@ -155,7 +158,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),  # short-lived access
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),  # short-lived access
     "REFRESH_TOKEN_LIFETIME": timedelta(days=5),
     "ROTATE_REFRESH_TOKENS": False,
     "BLACKLIST_AFTER_ROTATION": True,
@@ -206,3 +209,16 @@ EMAIL_USE_SSL = False
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+# import os
+
+# CLIENT_ID = os.environ.get('CLIENT_ID')
+# CLIENT_SECRETE = os.environ.get('CLIENT_SECRETE')
+
+# OAUTH2_PROVIDER = {
+#     'SCOPES': {'calendar': 'Read/write access to Calendar'},
+#     'CLIENT_ID':  CLIENT_ID,
+#     'CLIENT_SECRET': CLIENT_SECRETE,
+# }
+
+# GOOGLE_TOKEN_FILE = 'token.json'
